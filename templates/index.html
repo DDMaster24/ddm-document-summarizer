@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Summarizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 Document Summarizer</h1>
+            <p class="subtitle">Upload a document or paste text to get a summary</p>
+        </header>
+
+        <main>
+            <div class="card">
+                <form id="summarizerForm" enctype="multipart/form-data">
+
+                    <!-- File Upload Section -->
+                    <div class="section">
+                        <h2>Option 1: Upload a File</h2>
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">📁</div>
+                            <p class="upload-text">Drag and drop a file here</p>
+                            <p class="upload-subtext">or</p>
+                            <label for="fileInput" class="btn btn-secondary">Choose File</label>
+                            <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.doc,.txt" hidden>
+                            <p class="file-types">Supported: PDF, Word (.docx), Text (.txt)</p>
+                        </div>
+                        <div id="fileName" class="file-name"></div>
+                    </div>
+
+                    <div class="divider">
+                        <span>OR</span>
+                    </div>
+
+                    <!-- Text Input Section -->
+                    <div class="section">
+                        <h2>Option 2: Paste or Type Text</h2>
+                        <textarea
+                            id="manualText"
+                            name="manual_text"
+                            placeholder="Paste or type your text here..."
+                            rows="8"
+                        ></textarea>
+                    </div>
+
+                    <!-- Output Format Selection -->
+                    <div class="section">
+                        <h2>Choose Output Format</h2>
+                        <div class="format-options">
+                            <label class="format-option">
+                                <input type="radio" name="output_format" value="pdf" checked>
+                                <span class="format-label">
+                                    <span class="format-icon">📕</span>
+                                    PDF
+                                </span>
+                            </label>
+                            <label class="format-option">
+                                <input type="radio" name="output_format" value="word">
+                                <span class="format-label">
+                                    <span class="format-icon">📘</span>
+                                    Word
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span id="btnText">Summarize Document</span>
+                        <span id="btnLoader" class="loader" style="display: none;"></span>
+                    </button>
+
+                </form>
+            </div>
+
+            <!-- Result Section -->
+            <div id="resultSection" class="card result-section" style="display: none;">
+                <h2>Summary</h2>
+                <div id="summaryText" class="summary-text"></div>
+                <button id="downloadBtn" class="btn btn-success">
+                    <span class="download-icon">⬇️</span>
+                    Download Summary
+                </button>
+            </div>
+
+            <!-- Error Section -->
+            <div id="errorSection" class="card error-section" style="display: none;">
+                <h2>Error</h2>
+                <p id="errorText"></p>
+                <button onclick="location.reload()" class="btn btn-secondary">Try Again</button>
+            </div>
+
+        </main>
+
+        <footer>
+            <p>Made with ❤️ for Grandpa | Powered by Groq AI</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
