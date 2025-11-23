@@ -84,11 +84,11 @@ def create_app_icon():
         append_images=images[1:]
     )
 
-    print("✅ Icon created successfully: icon.ico")
+    print("Icon created successfully: icon.ico")
 
     # Also save as PNG for reference
     images[0].save('icon.png', format='PNG')
-    print("✅ PNG version created: icon.png")
+    print("PNG version created: icon.png")
 
 if __name__ == '__main__':
     create_app_icon()
