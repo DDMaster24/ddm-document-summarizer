@@ -35,8 +35,6 @@ PrivilegesRequiredOverridesAllowed=dialog
 
 ; UI
 WizardStyle=modern
-WizardImageFile=compiler:WizModernImage-IS.bmp
-WizardSmallImageFile=compiler:WizModernSmallImage-IS.bmp
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
