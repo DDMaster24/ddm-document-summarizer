@@ -50,25 +50,20 @@ if [ ! -f "venv/.requirements_installed" ]; then
     echo ""
 fi
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo "⚠️  No .env file found!"
-    echo "Creating .env file from template..."
-    cp .env.example .env
+# Check if config exists
+if [ ! -f "config.json" ]; then
     echo ""
     echo "=========================================="
-    echo "🔑 IMPORTANT: API Key Setup Required"
+    echo "🔑 First-Time Setup"
     echo "=========================================="
     echo ""
-    echo "1. Go to: https://console.groq.com"
-    echo "2. Sign up for a FREE account"
-    echo "3. Create an API key"
-    echo "4. Open the .env file and paste your API key"
+    echo "No API key configured yet."
+    echo "The setup wizard will open in your browser."
     echo ""
-    echo "The .env file is located in:"
-    echo "$(pwd)/.env"
+    echo "You'll need a FREE API key from:"
+    echo "  - Gemini: https://aistudio.google.com/app/apikey"
+    echo "  - OR Groq: https://console.groq.com"
     echo ""
-    read -p "Press Enter once you've added your API key..."
 fi
 
 # Start the application

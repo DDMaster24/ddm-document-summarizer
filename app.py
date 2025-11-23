@@ -1,9 +1,8 @@
 import os
 import io
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-from groq import Groq
 import PyPDF2
 import pdfplumber
 from docx import Document
@@ -13,6 +12,9 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.enums import TA_JUSTIFY
 import shutil
+
+from api_manager import APIKeyManager
+from ai_providers import get_provider
 
 # Load environment variables
 load_dotenv()
@@ -26,13 +28,8 @@ app.config['OUTPUT_FOLDER'] = 'outputs'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 
-# Initialize Groq client
-groq_api_key = os.getenv('GROQ_API_KEY')
-if not groq_api_key:
-    print("WARNING: GROQ_API_KEY not set. Please set it in .env file")
-    client = None
-else:
-    client = Groq(api_key=groq_api_key)
+# Initialize API Key Manager
+api_manager = APIKeyManager()
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'doc', 'txt'}
 
@@ -90,35 +87,27 @@ def extract_text(file_path, filename):
         raise Exception(f"Unsupported file type: {ext}")
 
 def summarize_text(text):
-    """Summarize text using Groq API"""
-    if not client:
-        raise Exception("Groq API key not configured. Please add your API key to .env file")
+    """Summarize text using configured AI provider"""
+    # Get default provider
+    provider_name = api_manager.get_default_provider()
+    if not provider_name:
+        raise Exception("No AI provider configured. Please configure an API key in settings.")
 
+    # Get API key for provider
+    api_key = api_manager.get_api_key(provider_name)
+    if not api_key:
+        raise Exception(f"API key not found for {provider_name}")
+
+    # Get provider instance
+    provider = get_provider(provider_name, api_key)
+    if not provider:
+        raise Exception(f"Unsupported provider: {provider_name}")
+
+    # Summarize using the provider
     try:
-        # Truncate text if too long (Groq has token limits)
-        max_chars = 24000  # Roughly 6000 tokens
-        if len(text) > max_chars:
-            text = text[:max_chars] + "\n\n[Text truncated due to length...]"
-
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful assistant that creates clear, concise summaries of documents. Provide a well-structured summary with key points and main ideas."
-                },
-                {
-                    "role": "user",
-                    "content": f"Please provide a comprehensive summary of the following text:\n\n{text}"
-                }
-            ],
-            model="llama-3.1-70b-versatile",  # Fast and good quality
-            temperature=0.3,
-            max_tokens=2000
-        )
-
-        return chat_completion.choices[0].message.content
+        return provider.summarize(text)
     except Exception as e:
-        raise Exception(f"Error calling Groq API: {str(e)}")
+        raise Exception(f"Error summarizing text with {provider_name}: {str(e)}")
 
 def create_pdf_output(summary, original_filename):
     """Create PDF file with summary"""
@@ -180,15 +169,35 @@ def create_docx_output(summary, original_filename):
 
     return output_path
 
+# Routes
+
 @app.route('/')
 def index():
-    """Render main page"""
+    """Render main page or redirect to setup if not configured"""
+    if not api_manager.has_any_provider():
+        return redirect(url_for('setup'))
     return render_template('index.html')
+
+@app.route('/setup')
+def setup():
+    """Render setup wizard"""
+    return render_template('setup.html')
+
+@app.route('/settings')
+def settings():
+    """Render settings page"""
+    if not api_manager.has_any_provider():
+        return redirect(url_for('setup'))
+    return render_template('settings.html')
 
 @app.route('/summarize', methods=['POST'])
 def summarize():
     """Handle summarization request"""
     try:
+        # Check if configured
+        if not api_manager.has_any_provider():
+            return jsonify({'error': 'No AI provider configured. Please complete setup first.'}), 400
+
         text_to_summarize = ""
         original_filename = "document"
 
@@ -256,13 +265,126 @@ def download(filename):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# API Routes for Setup and Settings
+
+@app.route('/api/test-key', methods=['POST'])
+def test_api_key():
+    """Test if an API key is valid"""
+    try:
+        data = request.json
+        provider_name = data.get('provider')
+        api_key = data.get('api_key')
+
+        if not provider_name or not api_key:
+            return jsonify({'success': False, 'error': 'Missing provider or API key'}), 400
+
+        # Get provider instance
+        provider = get_provider(provider_name, api_key)
+        if not provider:
+            return jsonify({'success': False, 'error': 'Invalid provider'}), 400
+
+        # Test connection
+        is_valid = provider.test_connection()
+
+        if is_valid:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'API key validation failed'}), 400
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/setup', methods=['POST'])
+def save_setup():
+    """Save initial setup configuration"""
+    try:
+        data = request.json
+        provider = data.get('provider')
+        api_key = data.get('api_key')
+
+        if not provider or not api_key:
+            return jsonify({'success': False, 'error': 'Missing provider or API key'}), 400
+
+        # Add provider to config
+        api_manager.add_provider(provider, api_key, set_as_default=True)
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/providers', methods=['GET'])
+def list_providers():
+    """Get list of configured providers"""
+    try:
+        providers = api_manager.list_providers()
+        return jsonify({'success': True, 'providers': providers})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/add-provider', methods=['POST'])
+def add_provider():
+    """Add a new provider"""
+    try:
+        data = request.json
+        provider = data.get('provider')
+        api_key = data.get('api_key')
+        set_as_default = data.get('set_as_default', False)
+
+        if not provider or not api_key:
+            return jsonify({'success': False, 'error': 'Missing provider or API key'}), 400
+
+        api_manager.add_provider(provider, api_key, set_as_default=set_as_default)
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/remove-provider', methods=['POST'])
+def remove_provider():
+    """Remove a provider"""
+    try:
+        data = request.json
+        provider = data.get('provider')
+
+        if not provider:
+            return jsonify({'success': False, 'error': 'Missing provider name'}), 400
+
+        api_manager.remove_provider(provider)
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/set-default', methods=['POST'])
+def set_default_provider():
+    """Set default provider"""
+    try:
+        data = request.json
+        provider = data.get('provider')
+
+        if not provider:
+            return jsonify({'success': False, 'error': 'Missing provider name'}), 400
+
+        api_manager.set_default_provider(provider)
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
-    api_configured = groq_api_key is not None and groq_api_key != ""
+    has_config = api_manager.has_any_provider()
+    default_provider = api_manager.get_default_provider()
+
     return jsonify({
         'status': 'healthy',
-        'api_configured': api_configured
+        'configured': has_config,
+        'default_provider': default_provider
     })
 
 # Clean up old files on startup
@@ -279,14 +401,13 @@ if __name__ == '__main__':
     print("📄 Document Summarizer is starting...")
     print("="*60)
 
-    if not groq_api_key:
-        print("\n⚠️  WARNING: Groq API key not found!")
-        print("Please create a .env file with your API key:")
-        print("   GROQ_API_KEY=your_key_here")
-        print("\nGet your free API key at: https://console.groq.com")
+    if not api_manager.has_any_provider():
+        print("\n⚠️  No AI provider configured yet!")
+        print("Please complete the setup wizard in your browser.")
         print("="*60 + "\n")
     else:
-        print("\n✅ Groq API configured successfully!")
+        default = api_manager.get_default_provider()
+        print(f"\n✅ Using {default.upper()} as the default AI provider")
         print("="*60 + "\n")
 
     print("🌐 Open your browser and go to: http://localhost:5000")

@@ -27,6 +27,9 @@ wheels/
 .env
 *.env
 
+# Configuration (contains API keys)
+config.json
+
 # Uploads and outputs
 uploads/
 outputs/

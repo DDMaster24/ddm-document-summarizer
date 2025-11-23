@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup - Document Summarizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .setup-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .setup-steps {
+            margin-bottom: 30px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .step-number {
+            width: 35px;
+            height: 35px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .step-content {
+            flex: 1;
+        }
+        .step-content h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1em;
+        }
+        .step-content p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .provider-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .provider-card {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .provider-card:hover {
+            border-color: #4CAF50;
+            background: #f9f9f9;
+        }
+        .provider-card.selected {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        .provider-card input[type="radio"] {
+            display: none;
+        }
+        .provider-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        .provider-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+        .provider-desc {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .api-key-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .helper-text {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .helper-text a {
+            color: #1976D2;
+            font-weight: bold;
+        }
+        .test-status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+        .test-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="card">
+            <header style="text-align: center; margin-bottom: 30px;">
+                <h1>📄 Welcome to Document Summarizer</h1>
+                <p class="subtitle">Let's get you set up in just a few steps</p>
+            </header>
+
+            <div class="setup-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Choose Your AI Provider</h3>
+                        <p>Select which AI service you'd like to use</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Enter API Key</h3>
+                        <p>Get your free API key and paste it below</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Start Summarizing!</h3>
+                        <p>You're all set to use the app</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="setupForm">
+                <h2>Step 1: Select AI Provider</h2>
+                <div class="provider-selection">
+                    <label class="provider-card selected" data-provider="gemini">
+                        <input type="radio" name="provider" value="gemini" checked>
+                        <div class="provider-icon">🤖</div>
+                        <div class="provider-name">Gemini</div>
+                        <div class="provider-desc">Google AI - Fast & Free</div>
+                        <div class="provider-desc" style="margin-top: 5px; font-weight: bold; color: #4CAF50;">Recommended</div>
+                    </label>
+                    <label class="provider-card" data-provider="groq">
+                        <input type="radio" name="provider" value="groq">
+                        <div class="provider-icon">⚡</div>
+                        <div class="provider-name">Groq</div>
+                        <div class="provider-desc">Ultra Fast AI</div>
+                    </label>
+                </div>
+
+                <h2>Step 2: Enter Your API Key</h2>
+
+                <div class="helper-text" id="geminiHelper">
+                    <strong>Get your free Gemini API key:</strong><br>
+                    1. Visit <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a><br>
+                    2. Sign in with your Google account<br>
+                    3. Click "Create API Key"<br>
+                    4. Copy the key and paste it below
+                </div>
+
+                <div class="helper-text" id="groqHelper" style="display: none;">
+                    <strong>Get your free Groq API key:</strong><br>
+                    1. Visit <a href="https://console.groq.com" target="_blank">Groq Console</a><br>
+                    2. Sign up for a free account<br>
+                    3. Go to API Keys section<br>
+                    4. Create a new key and paste it below
+                </div>
+
+                <input
+                    type="text"
+                    id="apiKey"
+                    class="api-key-input"
+                    placeholder="Paste your API key here..."
+                    required
+                >
+
+                <div id="testStatus" class="test-status"></div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" id="testBtn" style="flex: 1;">
+                        Test Connection
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn" style="flex: 2;" disabled>
+                        <span id="btnText">Save & Continue</span>
+                        <span id="btnLoader" class="loader" style="display: none;"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Provider selection
+        const providerCards = document.querySelectorAll('.provider-card');
+        const geminiHelper = document.getElementById('geminiHelper');
+        const groqHelper = document.getElementById('groqHelper');
+
+        providerCards.forEach(card => {
+            card.addEventListener('click', function() {
+                providerCards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                this.querySelector('input[type="radio"]').checked = true;
+
+                const provider = this.dataset.provider;
+                if (provider === 'gemini') {
+                    geminiHelper.style.display = 'block';
+                    groqHelper.style.display = 'none';
+                } else {
+                    geminiHelper.style.display = 'none';
+                    groqHelper.style.display = 'block';
+                }
+            });
+        });
+
+        // Test connection
+        const testBtn = document.getElementById('testBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const testStatus = document.getElementById('testStatus');
+        const apiKeyInput = document.getElementById('apiKey');
+
+        testBtn.addEventListener('click', async function() {
+            const provider = document.querySelector('input[name="provider"]:checked').value;
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!apiKey) {
+                testStatus.className = 'test-status error';
+                testStatus.textContent = 'Please enter an API key';
+                testStatus.style.display = 'block';
+                return;
+            }
+
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+
+            try {
+                const response = await fetch('/api/test-key', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ provider, api_key: apiKey })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    testStatus.className = 'test-status success';
+                    testStatus.textContent = '✓ Connection successful! Your API key is valid.';
+                    saveBtn.disabled = false;
+                } else {
+                    testStatus.className = 'test-status error';
+                    testStatus.textContent = '✗ Connection failed: ' + (result.error || 'Invalid API key');
+                    saveBtn.disabled = true;
+                }
+                testStatus.style.display = 'block';
+            } catch (error) {
+                testStatus.className = 'test-status error';
+                testStatus.textContent = '✗ Error testing connection: ' + error.message;
+                testStatus.style.display = 'block';
+                saveBtn.disabled = true;
+            }
+
+            testBtn.disabled = false;
+            testBtn.textContent = 'Test Connection';
+        });
+
+        // Form submission
+        const setupForm = document.getElementById('setupForm');
+        setupForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const provider = document.querySelector('input[name="provider"]:checked').value;
+            const apiKey = apiKeyInput.value.trim();
+
+            saveBtn.disabled = true;
+            document.getElementById('btnText').textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ provider, api_key: apiKey })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    window.location.href = '/';
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to save configuration'));
+                    saveBtn.disabled = false;
+                    document.getElementById('btnText').textContent = 'Save & Continue';
+                }
+            } catch (error) {
+                alert('Error saving configuration: ' + error.message);
+                saveBtn.disabled = false;
+                document.getElementById('btnText').textContent = 'Save & Continue';
+            }
+        });
+    </script>
+</body>
+</html>
