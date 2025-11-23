@@ -1,0 +1,87 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+
+jobs:
+  create-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write  # Needed to create releases
+
+    steps:
+      - name: 📥 Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🎨 Generate application icon
+        run: python create_icon.py
+
+      - name: 🔨 Build executable with PyInstaller
+        run: pyinstaller DocumentSummarizer.spec --clean --noconfirm
+
+      - name: 📋 Install Inno Setup
+        run: choco install innosetup -y
+
+      - name: 📦 Build Windows Installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+        shell: pwsh
+
+      - name: 📝 Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Document Summarizer ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## 📄 Document Summarizer ${{ steps.get_version.outputs.VERSION }}
+
+            ### 🎉 What's New
+            - PDF, DOCX, and TXT document summarization
+            - Powered by Google Gemini AI (free tier)
+            - Easy setup wizard for API configuration
+            - Professional Windows installer
+
+            ### 📥 Download
+            Download `DocumentSummarizerSetup.exe` below and double-click to install!
+
+            ### ✨ Features
+            - ✅ No Python installation required
+            - ✅ System tray integration
+            - ✅ One-click setup
+            - ✅ Portable configuration
+
+            ### 🔑 Getting Started
+            1. Download and run the installer
+            2. Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+            3. Enter your API key in the setup wizard
+            4. Start summarizing documents!
+
+          files: |
+            installer_output/DocumentSummarizerSetup.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ✅ Release Created
+        run: |
+          echo "🎉 Release created successfully!"
+          echo "🔗 Check: https://github.com/${{ github.repository }}/releases"
+        shell: pwsh
