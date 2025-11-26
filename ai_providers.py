@@ -22,7 +22,7 @@ class GeminiProvider(AIProvider):
 
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.model_name = "gemini-1.5-flash"
+        self.model_name = "models/gemini-1.5-flash"
         self._client = None
 
     def _get_client(self):
