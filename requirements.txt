@@ -1,11 +1,15 @@
-Flask==3.0.0
-werkzeug==3.0.1
+# Core dependencies
 google-generativeai==0.3.2
 python-docx==1.1.0
 PyPDF2==3.0.1
 pdfplumber==0.10.3
 reportlab==4.0.7
 python-dotenv==1.0.0
-pystray==0.19.5
 Pillow==10.1.0
+
+# Native GUI
+customtkinter==5.2.1
+tkinterdnd2==0.3.0
+
+# Build tools
 pyinstaller==6.3.0

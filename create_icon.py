@@ -17,12 +17,12 @@ def create_app_icon():
         image = Image.new('RGB', (width, height), 'white')
         dc = ImageDraw.Draw(image)
 
-        # Draw gradient background (green theme)
+        # Draw gradient background (blue theme - professional)
         for i in range(height):
-            # Gradient from light green to darker green
-            r = int(76 - (i / height) * 20)
-            g = int(175 - (i / height) * 30)
-            b = int(80 - (i / height) * 20)
+            # Gradient from light blue to darker blue
+            r = int(37 + (i / height) * 10)
+            g = int(99 + (i / height) * 10)
+            b = int(235 - (i / height) * 40)
             dc.rectangle([0, i, width, i+1], fill=(r, g, b))
 
         # Calculate sizes based on icon size

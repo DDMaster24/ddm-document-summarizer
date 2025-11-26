@@ -1,28 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
 PyInstaller spec file for Document Summarizer
-This configures how the application is packaged into an executable
+Native desktop application with CustomTkinter GUI
 """
+import sys
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
-# Collect all data files
-datas = [
-    ('templates', 'templates'),
-    ('static', 'static'),
-    ('.env.example', '.'),
-]
+# Collect CustomTkinter and tkinterdnd2 data files
+datas = []
+datas += collect_data_files('customtkinter')
+datas += collect_data_files('tkinterdnd2')
 
 # Hidden imports that PyInstaller might miss
 hiddenimports = [
-    'pystray._win32',
     'PIL._tkinter_finder',
     'google.ai.generativelanguage',
     'google.generativeai',
+    'customtkinter',
+    'tkinterdnd2',
 ]
+hiddenimports += collect_submodules('customtkinter')
+hiddenimports += collect_submodules('tkinterdnd2')
 
 a = Analysis(
-    ['desktop_launcher.py'],
+    ['native_app.py'],
     pathex=[],
     binaries=[],
     datas=datas,
