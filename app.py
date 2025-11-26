@@ -19,10 +19,27 @@ from ai_providers import get_provider
 # Load environment variables
 load_dotenv()
 
+def get_app_data_dir():
+    """Get a writable directory for app data (uploads, outputs, etc.)"""
+    import sys
+    if sys.platform == 'win32':
+        # On Windows, use LOCALAPPDATA for user-specific writable storage
+        base_dir = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
+        app_data_dir = os.path.join(base_dir, 'DocumentSummarizer')
+    else:
+        # On Linux/Mac, use home directory
+        app_data_dir = os.path.join(os.path.expanduser('~'), '.document_summarizer')
+
+    os.makedirs(app_data_dir, exist_ok=True)
+    return app_data_dir
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['OUTPUT_FOLDER'] = 'outputs'
+
+# Use user-writable directory for uploads and outputs
+_app_data_dir = get_app_data_dir()
+app.config['UPLOAD_FOLDER'] = os.path.join(_app_data_dir, 'uploads')
+app.config['OUTPUT_FOLDER'] = os.path.join(_app_data_dir, 'outputs')
 
 # Create necessary folders
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

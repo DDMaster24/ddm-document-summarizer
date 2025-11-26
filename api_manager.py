@@ -1,12 +1,31 @@
 import json
 import os
+import sys
 import base64
 from typing import Dict, List, Optional
+
+
+def get_config_dir():
+    """Get a writable directory for config files"""
+    if sys.platform == 'win32':
+        # On Windows, use LOCALAPPDATA for user-specific writable storage
+        base_dir = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
+        config_dir = os.path.join(base_dir, 'DocumentSummarizer')
+    else:
+        # On Linux/Mac, use home directory
+        config_dir = os.path.join(os.path.expanduser('~'), '.document_summarizer')
+
+    os.makedirs(config_dir, exist_ok=True)
+    return config_dir
+
 
 class APIKeyManager:
     """Manages API keys for multiple AI providers"""
 
-    def __init__(self, config_file='config.json'):
+    def __init__(self, config_file=None):
+        if config_file is None:
+            # Use user-writable directory for config
+            config_file = os.path.join(get_config_dir(), 'config.json')
         self.config_file = config_file
         self.config = self._load_config()
 
