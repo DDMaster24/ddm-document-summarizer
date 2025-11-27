@@ -20,7 +20,7 @@ def get_config_dir():
 
 
 class APIKeyManager:
-    """Manages API keys for multiple AI providers"""
+    """Manages API keys for multiple AI providers with model selection"""
 
     def __init__(self, config_file=None):
         if config_file is None:
@@ -59,11 +59,12 @@ class APIKeyManager:
         """Decode API key from storage"""
         return base64.b64decode(encoded_key.encode()).decode()
 
-    def add_provider(self, provider_name: str, api_key: str, set_as_default: bool = True):
-        """Add or update a provider's API key"""
+    def add_provider(self, provider_name: str, api_key: str, model: str = None, set_as_default: bool = True):
+        """Add or update a provider's API key and model"""
         encoded_key = self._encode_key(api_key)
         self.config['providers'][provider_name] = {
             'api_key': encoded_key,
+            'model': model,
             'enabled': True
         }
 
@@ -71,6 +72,22 @@ class APIKeyManager:
             self.config['default_provider'] = provider_name
 
         self._save_config()
+
+    def update_model(self, provider_name: str, model: str):
+        """Update the model for a provider"""
+        if provider_name in self.config['providers']:
+            self.config['providers'][provider_name]['model'] = model
+            self._save_config()
+
+    def get_model(self, provider_name: str = None) -> Optional[str]:
+        """Get the selected model for a provider"""
+        if provider_name is None:
+            provider_name = self.config['default_provider']
+
+        if provider_name and provider_name in self.config['providers']:
+            return self.config['providers'][provider_name].get('model')
+
+        return None
 
     def remove_provider(self, provider_name: str):
         """Remove a provider"""
@@ -111,6 +128,7 @@ class APIKeyManager:
         for name, data in self.config['providers'].items():
             providers.append({
                 'name': name,
+                'model': data.get('model'),
                 'enabled': data.get('enabled', True),
                 'is_default': name == self.config['default_provider'],
                 'api_key_preview': self._get_key_preview(data['api_key'])
