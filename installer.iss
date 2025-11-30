@@ -2,7 +2,7 @@
 ; This creates a professional Windows installer
 
 #define MyAppName "Document Summarizer"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "Your Company Name"
 #define MyAppURL "https://yourwebsite.com"
 #define MyAppExeName "DocumentSummarizer.exe"

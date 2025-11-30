@@ -4,7 +4,7 @@ Professional multi-provider AI document summarization tool
 Built with CustomTkinter for a modern, polished interface
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __app_name__ = "Document Summarizer"
 
 import os
@@ -694,17 +694,93 @@ class DocumentSummarizerApp(TkinterDnD.Tk):
         self.refresh_ui()
 
     def _create_summarize_tab(self):
-        """Create the summarize input tab"""
+        """Create the summarize input tab with toggle between upload and text input"""
         # Scrollable content
         scroll_frame = ctk.CTkScrollableFrame(self.content_area, fg_color="transparent")
         scroll_frame.pack(fill="both", expand=True, padx=24, pady=20)
 
-        # Card container
-        card = ctk.CTkFrame(scroll_frame, fg_color=self.theme.get("CARD_BG"), corner_radius=12)
-        card.pack(fill="x", pady=(0, 16))
+        # Input mode selection (toggle buttons)
+        mode_card = ctk.CTkFrame(scroll_frame, fg_color=self.theme.get("CARD_BG"), corner_radius=12)
+        mode_card.pack(fill="x", pady=(0, 12))
 
-        # Upload section header
-        header = ctk.CTkFrame(card, fg_color="transparent")
+        mode_header = ctk.CTkLabel(
+            mode_card,
+            text="Choose Input Method",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=self.theme.get("TEXT_PRIMARY")
+        )
+        mode_header.pack(pady=(16, 12), padx=20, anchor="w")
+
+        # Toggle buttons frame
+        toggle_frame = ctk.CTkFrame(mode_card, fg_color="transparent")
+        toggle_frame.pack(fill="x", padx=20, pady=(0, 16))
+
+        # Initialize input mode variable
+        if not hasattr(self, 'input_mode_var'):
+            self.input_mode_var = ctk.StringVar(value="upload")
+
+        self.upload_mode_btn = ctk.CTkButton(
+            toggle_frame,
+            text="Upload Document",
+            width=180,
+            height=40,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color=self.theme.get("ACCENT_PRIMARY") if self.input_mode_var.get() == "upload" else self.theme.get("INPUT_BG"),
+            text_color="#FFFFFF" if self.input_mode_var.get() == "upload" else self.theme.get("TEXT_PRIMARY"),
+            hover_color=self.theme.get("ACCENT_HOVER"),
+            corner_radius=8,
+            command=lambda: self._switch_input_mode("upload")
+        )
+        self.upload_mode_btn.pack(side="left", padx=(0, 8))
+
+        self.text_mode_btn = ctk.CTkButton(
+            toggle_frame,
+            text="Type Text Directly",
+            width=180,
+            height=40,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color=self.theme.get("ACCENT_PRIMARY") if self.input_mode_var.get() == "text" else self.theme.get("INPUT_BG"),
+            text_color="#FFFFFF" if self.input_mode_var.get() == "text" else self.theme.get("TEXT_PRIMARY"),
+            hover_color=self.theme.get("ACCENT_HOVER"),
+            corner_radius=8,
+            command=lambda: self._switch_input_mode("text")
+        )
+        self.text_mode_btn.pack(side="left")
+
+        # Container for input panels
+        self.input_container = ctk.CTkFrame(scroll_frame, fg_color="transparent")
+        self.input_container.pack(fill="x", pady=(0, 12))
+
+        # Create both panels (will show/hide based on mode)
+        self._create_upload_panel()
+        self._create_text_panel()
+
+        # Show the correct panel based on current mode
+        self._update_input_panels()
+
+        # Summarize button card
+        action_card = ctk.CTkFrame(scroll_frame, fg_color=self.theme.get("CARD_BG"), corner_radius=12)
+        action_card.pack(fill="x")
+
+        # Summarize button
+        self.summarize_btn = ctk.CTkButton(
+            action_card,
+            text="Summarize Document",
+            height=50,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            fg_color=self.theme.get("SUCCESS"),
+            hover_color=self.theme.get("SUCCESS_HOVER"),
+            corner_radius=10,
+            command=self.summarize_document
+        )
+        self.summarize_btn.pack(fill="x", padx=20, pady=20)
+
+    def _create_upload_panel(self):
+        """Create the upload document panel"""
+        self.upload_panel = ctk.CTkFrame(self.input_container, fg_color=self.theme.get("CARD_BG"), corner_radius=12)
+
+        # Header
+        header = ctk.CTkFrame(self.upload_panel, fg_color="transparent")
         header.pack(fill="x", padx=20, pady=(20, 12))
 
         title = ctk.CTkLabel(
@@ -723,42 +799,52 @@ class DocumentSummarizerApp(TkinterDnD.Tk):
         )
         subtitle.pack(anchor="w", pady=(4, 0))
 
-        # Drop zone
+        # Drop zone container
         self.drop_zone = ctk.CTkFrame(
-            card,
+            self.upload_panel,
             fg_color=self.theme.get("INPUT_BG"),
             corner_radius=10,
             border_width=2,
             border_color=self.theme.get("BORDER")
         )
-        self.drop_zone.pack(fill="x", padx=20, pady=(0, 12))
+        self.drop_zone.pack(fill="x", padx=20, pady=(0, 20))
 
         # Register drag and drop
         self.drop_zone.drop_target_register(DND_FILES)
         self.drop_zone.dnd_bind('<<Drop>>', self.on_file_drop)
 
-        drop_content = ctk.CTkFrame(self.drop_zone, fg_color="transparent")
-        drop_content.pack(expand=True, pady=28)
+        # Content inside drop zone (will change when file is loaded)
+        self.drop_content = ctk.CTkFrame(self.drop_zone, fg_color="transparent")
+        self.drop_content.pack(expand=True, pady=28)
+
+        # Default state - no file loaded
+        self._show_empty_drop_zone()
+
+    def _show_empty_drop_zone(self):
+        """Show the empty drop zone state"""
+        # Clear existing content
+        for widget in self.drop_content.winfo_children():
+            widget.destroy()
 
         # Drop icon
         drop_icon = ctk.CTkLabel(
-            drop_content,
+            self.drop_content,
             text="[ + ]",
             font=ctk.CTkFont(size=28, weight="bold"),
             text_color=self.theme.get("TEXT_MUTED")
         )
         drop_icon.pack()
 
-        self.drop_label = ctk.CTkLabel(
-            drop_content,
+        drop_label = ctk.CTkLabel(
+            self.drop_content,
             text="Drop your file here",
             font=ctk.CTkFont(size=14),
             text_color=self.theme.get("TEXT_SECONDARY")
         )
-        self.drop_label.pack(pady=(8, 12))
+        drop_label.pack(pady=(8, 12))
 
         browse_btn = ctk.CTkButton(
-            drop_content,
+            self.drop_content,
             text="Browse Files",
             width=120,
             height=36,
@@ -771,111 +857,157 @@ class DocumentSummarizerApp(TkinterDnD.Tk):
         browse_btn.pack()
 
         formats_label = ctk.CTkLabel(
-            drop_content,
+            self.drop_content,
             text="Supports PDF, DOCX, TXT",
             font=ctk.CTkFont(size=11),
             text_color=self.theme.get("TEXT_MUTED")
         )
         formats_label.pack(pady=(10, 0))
 
-        # File info label
-        self.file_info_label = ctk.CTkLabel(
-            card,
-            text="",
-            font=ctk.CTkFont(size=12),
+    def _show_loaded_file_drop_zone(self, filename: str, char_count: int = 0):
+        """Show the loaded file state in the drop zone"""
+        # Clear existing content
+        for widget in self.drop_content.winfo_children():
+            widget.destroy()
+
+        # Success icon
+        success_icon = ctk.CTkLabel(
+            self.drop_content,
+            text="✓",
+            font=ctk.CTkFont(size=36, weight="bold"),
             text_color=self.theme.get("SUCCESS")
         )
-        self.file_info_label.pack(padx=20, anchor="w")
+        success_icon.pack()
 
-        # Divider with OR
-        or_frame = ctk.CTkFrame(card, fg_color="transparent")
-        or_frame.pack(fill="x", padx=20, pady=12)
-
-        or_line1 = ctk.CTkFrame(or_frame, fg_color=self.theme.get("BORDER"), height=1)
-        or_line1.pack(side="left", fill="x", expand=True)
-
-        or_label = ctk.CTkLabel(
-            or_frame,
-            text="OR",
-            font=ctk.CTkFont(size=11),
-            text_color=self.theme.get("TEXT_MUTED")
+        # File loaded label
+        loaded_label = ctk.CTkLabel(
+            self.drop_content,
+            text="Document Loaded",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=self.theme.get("SUCCESS")
         )
-        or_label.pack(side="left", padx=12)
+        loaded_label.pack(pady=(8, 4))
 
-        or_line2 = ctk.CTkFrame(or_frame, fg_color=self.theme.get("BORDER"), height=1)
-        or_line2.pack(side="left", fill="x", expand=True)
-
-        # Text input section
-        text_label = ctk.CTkLabel(
-            card,
-            text="Paste text directly",
-            font=ctk.CTkFont(size=13, weight="bold"),
+        # Filename
+        filename_label = ctk.CTkLabel(
+            self.drop_content,
+            text=filename,
+            font=ctk.CTkFont(size=16, weight="bold"),
             text_color=self.theme.get("TEXT_PRIMARY")
         )
-        text_label.pack(padx=20, anchor="w", pady=(0, 8))
+        filename_label.pack()
 
-        self.text_input = ctk.CTkTextbox(
-            card,
-            height=100,
+        # Character count if available
+        if char_count > 0:
+            char_label = ctk.CTkLabel(
+                self.drop_content,
+                text=f"{char_count:,} characters extracted",
+                font=ctk.CTkFont(size=12),
+                text_color=self.theme.get("TEXT_SECONDARY")
+            )
+            char_label.pack(pady=(4, 12))
+        else:
+            ctk.CTkFrame(self.drop_content, fg_color="transparent", height=12).pack()
+
+        # Change file button
+        change_btn = ctk.CTkButton(
+            self.drop_content,
+            text="Change File",
+            width=120,
+            height=32,
             font=ctk.CTkFont(size=12),
+            fg_color=self.theme.get("BG_TERTIARY"),
+            text_color=self.theme.get("TEXT_PRIMARY"),
+            hover_color=self.theme.get("BORDER"),
+            corner_radius=8,
+            command=self.browse_file
+        )
+        change_btn.pack()
+
+    def _create_text_panel(self):
+        """Create the text input panel"""
+        self.text_panel = ctk.CTkFrame(self.input_container, fg_color=self.theme.get("CARD_BG"), corner_radius=12)
+
+        # Header
+        header = ctk.CTkFrame(self.text_panel, fg_color="transparent")
+        header.pack(fill="x", padx=20, pady=(20, 12))
+
+        title = ctk.CTkLabel(
+            header,
+            text="Type or Paste Text",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=self.theme.get("TEXT_PRIMARY")
+        )
+        title.pack(anchor="w")
+
+        subtitle = ctk.CTkLabel(
+            header,
+            text="Enter the text you want to summarize",
+            font=ctk.CTkFont(size=12),
+            text_color=self.theme.get("TEXT_SECONDARY")
+        )
+        subtitle.pack(anchor="w", pady=(4, 0))
+
+        # Text input
+        self.text_input = ctk.CTkTextbox(
+            self.text_panel,
+            height=200,
+            font=ctk.CTkFont(size=13),
             fg_color=self.theme.get("INPUT_BG"),
             text_color=self.theme.get("TEXT_PRIMARY"),
             border_width=1,
             border_color=self.theme.get("BORDER"),
             corner_radius=8
         )
-        self.text_input.pack(fill="x", padx=20, pady=(0, 16))
+        self.text_input.pack(fill="x", padx=20, pady=(0, 12))
 
-        # Export format selection
-        format_frame = ctk.CTkFrame(card, fg_color="transparent")
-        format_frame.pack(fill="x", padx=20, pady=(0, 16))
-
-        format_label = ctk.CTkLabel(
-            format_frame,
-            text="Export Format:",
-            font=ctk.CTkFont(size=13),
-            text_color=self.theme.get("TEXT_PRIMARY")
+        # Character count hint
+        hint_label = ctk.CTkLabel(
+            self.text_panel,
+            text="Minimum 50 characters required for summarization",
+            font=ctk.CTkFont(size=11),
+            text_color=self.theme.get("TEXT_MUTED")
         )
-        format_label.pack(side="left")
+        hint_label.pack(padx=20, anchor="w", pady=(0, 20))
 
-        self.format_var = ctk.StringVar(value="pdf")
+    def _switch_input_mode(self, mode: str):
+        """Switch between upload and text input modes"""
+        self.input_mode_var.set(mode)
+        self._update_input_panels()
 
-        pdf_radio = ctk.CTkRadioButton(
-            format_frame,
-            text="PDF",
-            variable=self.format_var,
-            value="pdf",
-            font=ctk.CTkFont(size=12),
-            fg_color=self.theme.get("ACCENT_PRIMARY"),
-            hover_color=self.theme.get("ACCENT_HOVER"),
-            text_color=self.theme.get("TEXT_PRIMARY")
-        )
-        pdf_radio.pack(side="left", padx=(16, 12))
+        # Update toggle button styles
+        if mode == "upload":
+            self.upload_mode_btn.configure(
+                fg_color=self.theme.get("ACCENT_PRIMARY"),
+                text_color="#FFFFFF"
+            )
+            self.text_mode_btn.configure(
+                fg_color=self.theme.get("INPUT_BG"),
+                text_color=self.theme.get("TEXT_PRIMARY")
+            )
+        else:
+            self.upload_mode_btn.configure(
+                fg_color=self.theme.get("INPUT_BG"),
+                text_color=self.theme.get("TEXT_PRIMARY")
+            )
+            self.text_mode_btn.configure(
+                fg_color=self.theme.get("ACCENT_PRIMARY"),
+                text_color="#FFFFFF"
+            )
 
-        word_radio = ctk.CTkRadioButton(
-            format_frame,
-            text="Word",
-            variable=self.format_var,
-            value="word",
-            font=ctk.CTkFont(size=12),
-            fg_color=self.theme.get("ACCENT_PRIMARY"),
-            hover_color=self.theme.get("ACCENT_HOVER"),
-            text_color=self.theme.get("TEXT_PRIMARY")
-        )
-        word_radio.pack(side="left")
+    def _update_input_panels(self):
+        """Show/hide input panels based on current mode"""
+        mode = self.input_mode_var.get()
 
-        # Summarize button
-        self.summarize_btn = ctk.CTkButton(
-            card,
-            text="Summarize Document",
-            height=48,
-            font=ctk.CTkFont(size=15, weight="bold"),
-            fg_color=self.theme.get("SUCCESS"),
-            hover_color=self.theme.get("SUCCESS_HOVER"),
-            corner_radius=10,
-            command=self.summarize_document
-        )
-        self.summarize_btn.pack(fill="x", padx=20, pady=(0, 20))
+        # Hide both first
+        self.upload_panel.pack_forget()
+        self.text_panel.pack_forget()
+
+        # Show the selected one
+        if mode == "upload":
+            self.upload_panel.pack(fill="x")
+        else:
+            self.text_panel.pack(fill="x")
 
     def _create_output_tab(self):
         """Create the output/results tab"""
@@ -1530,20 +1662,39 @@ class DocumentSummarizerApp(TkinterDnD.Tk):
         self.current_file_path = file_path
         filename = os.path.basename(file_path)
         self.original_filename = filename
-        self.file_info_label.configure(text=f"Loaded: {filename}")
-        self.status_label.configure(text="Extracting text...")
-        self.update()
+
+        # Update drop zone to show loading state
+        if hasattr(self, 'drop_content'):
+            for widget in self.drop_content.winfo_children():
+                widget.destroy()
+            loading_label = ctk.CTkLabel(
+                self.drop_content,
+                text="Loading...",
+                font=ctk.CTkFont(size=14),
+                text_color=self.theme.get("TEXT_SECONDARY")
+            )
+            loading_label.pack(pady=40)
+            self.update()
 
         def extract():
             try:
                 text = self.extract_text(file_path, filename)
                 self.extracted_text = text
                 char_count = len(text)
-                self.after(0, lambda: self.status_label.configure(
-                    text=f"Ready to summarize ({char_count:,} characters)"
-                ))
+
+                # Update UI on main thread
+                def update_ui():
+                    if hasattr(self, '_show_loaded_file_drop_zone'):
+                        self._show_loaded_file_drop_zone(filename, char_count)
+
+                self.after(0, update_ui)
             except Exception as e:
-                self.after(0, lambda: self.status_label.configure(text=f"Error: {str(e)}"))
+                def show_error():
+                    messagebox.showerror("Error", f"Failed to load file: {str(e)}")
+                    if hasattr(self, '_show_empty_drop_zone'):
+                        self._show_empty_drop_zone()
+
+                self.after(0, show_error)
 
         threading.Thread(target=extract, daemon=True).start()
 
@@ -1582,12 +1733,22 @@ class DocumentSummarizerApp(TkinterDnD.Tk):
         return '\n'.join([p.text for p in doc.paragraphs])
 
     def summarize_document(self):
-        """Summarize the document"""
-        text = self.extracted_text or self.text_input.get("1.0", "end-1c").strip()
+        """Summarize the document based on selected input mode"""
+        # Get text based on selected input mode
+        input_mode = getattr(self, 'input_mode_var', ctk.StringVar(value="upload")).get()
 
-        if not text or len(text) < 50:
-            messagebox.showwarning("Warning", "Please provide more text (at least 50 characters).")
-            return
+        if input_mode == "upload":
+            # Use uploaded document
+            if not self.extracted_text:
+                messagebox.showwarning("Warning", "Please upload a document first.")
+                return
+            text = self.extracted_text
+        else:
+            # Use text input
+            text = self.text_input.get("1.0", "end-1c").strip()
+            if not text or len(text) < 50:
+                messagebox.showwarning("Warning", "Please enter at least 50 characters of text.")
+                return
 
         provider_name = self.api_manager.get_default_provider()
         if not provider_name:
